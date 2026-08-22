@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --color-ink: #101418;
+  --color-muted: #5c6670;
+  --color-line: #e3e7eb;
+  --color-canvas: #ffffff;
+  --color-surface: #f6f8fa;
+  --color-accent: #1a56db;
+  --color-strip: #b42318;
+  --color-clean: #067647;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+/* Safari keeps its own disclosure triangle even with list-style: none. */
+summary::-webkit-details-marker {
+  display: none;
+}
