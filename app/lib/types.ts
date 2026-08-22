@@ -53,6 +53,11 @@ export interface Trend {
   direction: TrendDirection;
 }
 
+export interface CompareResult {
+  a: SearchResult;
+  b: SearchResult;
+}
+
 export const HISTORY_KEY = "search_history";
 export const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 export const DEFAULT_QUERY = "best air purifier for small room";

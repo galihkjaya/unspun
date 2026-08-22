@@ -22,6 +22,8 @@ from fastapi.responses import JSONResponse
 
 from api.services import bias_detector, cerebras_client, serpapi_client
 from api.services.schemas import (
+    CompareRequest,
+    CompareResponse,
     SearchRequest,
     SearchResult,
     TrendsRequest,
@@ -145,6 +147,8 @@ async def invalid_request(_: Request, exc: RequestValidationError) -> JSONRespon
     field = str(exc.errors()[0]["loc"][-1]) if exc.errors() else ""
     if field == "names":
         return _error(422, "Provide between 1 and 4 product names.")
+    if field in {"queryA", "queryB", "query_a", "query_b"}:
+        return _error(422, "Both comparison queries need at least 2 characters.")
     return _error(422, "Enter a search of at least 2 characters.")
 
 
@@ -180,9 +184,17 @@ async def trends(body: TrendsRequest):
     return {"trends": out}
 
 
-@app.post("/api/search", response_model=SearchResult, response_model_by_alias=True)
-async def search(body: SearchRequest):
-    query = body.query.strip()
+class PipelineError(Exception):
+    """Carries the HTTP status and user-facing message for a failed pipeline run."""
+
+    def __init__(self, status: int, message: str) -> None:
+        super().__init__(message)
+        self.status = status
+        self.message = message
+
+
+async def _pipeline(query: str) -> dict:
+    """The full search pipeline for one query. Raises PipelineError on failure."""
     deadline = time.monotonic() + SEARCH_BUDGET
 
     async with serpapi_client.client() as client:
@@ -195,9 +207,9 @@ async def search(body: SearchRequest):
 
         # Organic drives the bias audit — without it there is nothing to strip.
         if isinstance(organic_result, serpapi_client.SerpApiTimeout):
-            return _error(504, TIMEOUT_MESSAGE)
+            raise PipelineError(504, TIMEOUT_MESSAGE)
         if isinstance(organic_result, serpapi_client.SerpApiError):
-            return _error(502, f"Search provider failed: {organic_result}")
+            raise PipelineError(502, f"Search provider failed: {organic_result}")
         if isinstance(organic_result, BaseException):
             raise organic_result
 
@@ -222,14 +234,43 @@ async def search(body: SearchRequest):
     prompt = cerebras_client.build_prompt(query, quarantined, clean, reddit, shopping, affiliate_shopping)
     try:
         parsed = await cerebras_client.synthesize(prompt)
-    except RateLimitError:
-        return _error(429, "Cerebras rate limit reached (5 requests/min). Wait a moment and retry.")
+    except RateLimitError as exc:
+        raise PipelineError(429, "Cerebras rate limit reached (5 requests/min). Wait a moment and retry.") from exc
     except ValueError as exc:
-        return _error(502, f"Could not parse the model response: {exc}")
+        raise PipelineError(502, f"Could not parse the model response: {exc}") from exc
     except Exception as exc:  # noqa: BLE001 — surface a message, never a stack trace
-        return _error(502, f"Synthesis failed: {type(exc).__name__}")
+        raise PipelineError(502, f"Synthesis failed: {type(exc).__name__}") from exc
 
     return _enrich(cerebras_client.normalize(parsed, query, quarantined), shopping, reddit)
+
+
+@app.post("/api/search", response_model=SearchResult, response_model_by_alias=True)
+async def search(body: SearchRequest):
+    try:
+        return await _pipeline(body.query.strip())
+    except PipelineError as exc:
+        return _error(exc.status, exc.message)
+
+
+@app.post("/api/compare", response_model=CompareResponse, response_model_by_alias=True)
+async def compare(body: CompareRequest):
+    """Two full pipelines concurrently.
+
+    Costs two Cerebras calls against the 5 RPM limit, so a compare is roughly two
+    searches worth of budget. If either side fails the whole comparison fails —
+    a one-sided comparison is not a comparison.
+    """
+    query_a, query_b = body.query_a.strip(), body.query_b.strip()
+
+    results = await asyncio.gather(_pipeline(query_a), _pipeline(query_b), return_exceptions=True)
+    for result in results:
+        if isinstance(result, PipelineError):
+            return _error(result.status, result.message)
+        if isinstance(result, BaseException):
+            raise result
+
+    a, b = results
+    return {"a": a, "b": b}
 
 
 if __name__ == "__main__":

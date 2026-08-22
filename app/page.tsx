@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import CompareBar from "@/app/components/CompareBar";
+import CompareView from "@/app/components/CompareView";
 import ErrorState from "@/app/components/ErrorState";
 import Landing from "@/app/components/Landing";
 import LoadingSequence from "@/app/components/LoadingSequence";
@@ -12,6 +14,7 @@ import SearchHistory from "@/app/components/SearchHistory";
 import SummaryCard from "@/app/components/SummaryCard";
 import ThemeToggle from "@/app/components/ThemeToggle";
 import TrendBar from "@/app/components/TrendBar";
+import { useCompare } from "@/app/hooks/useCompare";
 import { useSearch } from "@/app/hooks/useSearch";
 import { useTrends } from "@/app/hooks/useTrends";
 
@@ -19,7 +22,11 @@ export default function Home() {
   const { result, loading, error, history, settling, animate, search, retry, clearHistory, activeQuery } =
     useSearch();
   const trends = useTrends(result);
+  const compare = useCompare();
+
   const [query, setQuery] = useState("");
+  const [queryB, setQueryB] = useState("");
+  const [comparing, setComparing] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
 
   const submit = (next: string) => {
@@ -32,8 +39,13 @@ export default function Home() {
     void search(next);
   };
 
-  // The landing page owns the viewport until there is something to show.
-  const landing = !result && !loading && !error;
+  const exitCompare = () => {
+    setComparing(false);
+    compare.reset();
+  };
+
+  const busy = loading || compare.loading;
+  const landing = !result && !error && !busy && !compare.result && !compare.error && !comparing;
 
   const historyPanel = (
     <SearchHistory entries={history} activeQuery={activeQuery} onSelect={pickHistory} onClear={clearHistory} />
@@ -45,7 +57,13 @@ export default function Home() {
         <div className="flex justify-end pt-5">
           <ThemeToggle />
         </div>
-        <Landing value={query} onChange={setQuery} onSubmit={submit} loading={loading} />
+        <Landing
+          value={query}
+          onChange={setQuery}
+          onSubmit={submit}
+          onCompare={() => setComparing(true)}
+          loading={loading}
+        />
       </div>
     );
   }
@@ -58,14 +76,35 @@ export default function Home() {
             Unspun<span className="text-accent">.</span>
           </span>
           <div className="min-w-0 flex-1">
-            <SearchBar
-              value={query}
-              onChange={setQuery}
-              onSubmit={() => submit(query)}
-              loading={loading}
-              size="sm"
-            />
+            {comparing ? (
+              <CompareBar
+                queryA={query}
+                queryB={queryB}
+                onChangeA={setQuery}
+                onChangeB={setQueryB}
+                onSubmit={() => void compare.compare(query.trim(), queryB.trim())}
+                onCancel={exitCompare}
+                loading={compare.loading}
+              />
+            ) : (
+              <SearchBar
+                value={query}
+                onChange={setQuery}
+                onSubmit={() => submit(query)}
+                loading={loading}
+                size="sm"
+              />
+            )}
           </div>
+          {!comparing && (
+            <button
+              type="button"
+              onClick={() => setComparing(true)}
+              className="hidden shrink-0 rounded-full border border-line px-4 py-2.5 text-sm text-muted transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/40 sm:block"
+            >
+              Compare
+            </button>
+          )}
           <ThemeToggle />
         </div>
       </header>
@@ -88,17 +127,34 @@ export default function Home() {
             {historyOpen && <div className="mt-3">{historyPanel}</div>}
           </div>
 
-          {loading && (
+          {busy && (
             <LoadingSequence
-              query={query || activeQuery || ""}
+              query={comparing ? `${query} vs ${queryB}` : query || activeQuery || ""}
               quarantined={settling?.quarantined ?? null}
               done={settling !== null}
             />
           )}
 
-          {!loading && error && <ErrorState message={error} onRetry={retry} />}
+          {!busy && comparing && compare.error && (
+            <ErrorState
+              message={compare.error}
+              onRetry={() => void compare.compare(query.trim(), queryB.trim())}
+            />
+          )}
+          {!busy && !comparing && error && <ErrorState message={error} onRetry={retry} />}
 
-          {!loading && !error && result && (
+          {!busy && comparing && compare.result && (
+            <CompareView a={compare.result.a} b={compare.result.b} />
+          )}
+
+          {!busy && comparing && !compare.result && !compare.error && (
+            <p className="rounded-xl border border-line bg-card p-5 text-sm text-muted">
+              Enter two products to compare. Each side runs the full pipeline, so a comparison costs two of
+              the five requests per minute.
+            </p>
+          )}
+
+          {!busy && !comparing && !error && result && (
             <>
               <TrendBar trends={trends} />
               <SummaryCard result={result} />

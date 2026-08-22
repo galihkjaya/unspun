@@ -62,3 +62,13 @@ class TrendsRequest(CamelModel):
 
 class TrendsResponse(CamelModel):
     trends: list[Trend]
+
+
+class CompareRequest(CamelModel):
+    query_a: str = Field(min_length=2, max_length=200)
+    query_b: str = Field(min_length=2, max_length=200)
+
+
+class CompareResponse(CamelModel):
+    a: SearchResult
+    b: SearchResult
