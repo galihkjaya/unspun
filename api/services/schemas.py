@@ -46,3 +46,19 @@ class SearchResult(CamelModel):
 
 class SearchRequest(CamelModel):
     query: str = Field(min_length=2, max_length=200)
+
+
+class Trend(CamelModel):
+    name: str
+    data: list[int]
+    change: str
+    direction: Literal["up", "down", "flat"]
+
+
+class TrendsRequest(CamelModel):
+    # Capped at the number of recommendations a search can return.
+    names: list[str] = Field(min_length=1, max_length=4)
+
+
+class TrendsResponse(CamelModel):
+    trends: list[Trend]

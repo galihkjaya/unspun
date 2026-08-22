@@ -21,12 +21,18 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from api.services import bias_detector, cerebras_client, serpapi_client
-from api.services.schemas import SearchRequest, SearchResult
+from api.services.schemas import (
+    SearchRequest,
+    SearchResult,
+    TrendsRequest,
+    TrendsResponse,
+)
 
 app = FastAPI(title="Unspun API", docs_url=None, redoc_url=None)
 
 SEARCH_BUDGET = 6.5  # leaves ~2s for synthesis inside the 10s function limit
 AFFILIATE_MIN_BUDGET = 1.5
+TRENDS_BUDGET = 8.0  # /api/trends runs alone, so it gets most of the function limit
 
 TIMEOUT_MESSAGE = (
     "Google is still being scraped for this query. Hit retry — the second attempt "
@@ -111,15 +117,67 @@ def _optional(result: list[dict] | BaseException) -> list[dict]:
     return [] if isinstance(result, BaseException) else result
 
 
+def _trend_summary(series: list[int]) -> tuple[str, str]:
+    """(label, direction) for a downsampled trend series.
+
+    The 90-day window becomes 12 buckets, so one bucket is roughly a week: the
+    final bucket is compared against the mean of the preceding ones. Values are
+    relative search interest (0-100), so this measures attention, not sales.
+    """
+    if len(series) < 4:
+        return "no trend data", "flat"
+
+    recent = series[-1]
+    baseline = sum(series[:-1]) / len(series[:-1])
+
+    if baseline == 0:
+        return ("new interest", "up") if recent > 0 else ("no trend data", "flat")
+
+    pct = round((recent - baseline) / baseline * 100)
+    if abs(pct) < 15:
+        return "stable", "flat"
+    return f"{pct:+d}% this week", "up" if pct > 0 else "down"
+
+
 @app.exception_handler(RequestValidationError)
-async def invalid_request(_: Request, __: RequestValidationError) -> JSONResponse:
+async def invalid_request(_: Request, exc: RequestValidationError) -> JSONResponse:
     """Match the frontend's `{error}` shape instead of FastAPI's `{detail}`."""
+    field = str(exc.errors()[0]["loc"][-1]) if exc.errors() else ""
+    if field == "names":
+        return _error(422, "Provide between 1 and 4 product names.")
     return _error(422, "Enter a search of at least 2 characters.")
 
 
 @app.get("/api/health")
 async def health() -> dict:
     return {"ok": True}
+
+
+@app.post("/api/trends", response_model=TrendsResponse, response_model_by_alias=True)
+async def trends(body: TrendsRequest):
+    """Google Trends interest per product.
+
+    Deliberately separate from /api/search: the product names only exist after
+    synthesis, and four live Trends scrapes measured 6s on their own — inside
+    /api/search that would push a cold request past Vercel's 10s limit. The
+    frontend calls this once results are on screen and the sparklines fade in.
+    """
+    names = [name.strip() for name in body.names if name.strip()][:4]
+    if not names:
+        return {"trends": []}
+
+    async with serpapi_client.client() as client:
+        results = await asyncio.gather(
+            *(serpapi_client.get_trends(client, name, timeout=TRENDS_BUDGET) for name in names),
+            return_exceptions=True,
+        )
+
+    out = []
+    for name, series in zip(names, results):
+        data = _optional(series)
+        change, direction = _trend_summary(data)
+        out.append({"name": name, "data": data, "change": change, "direction": direction})
+    return {"trends": out}
 
 
 @app.post("/api/search", response_model=SearchResult, response_model_by_alias=True)
@@ -207,4 +265,16 @@ if __name__ == "__main__":
     first, second = enriched["recommendations"]
     assert first["thumbnail"] == "https://img/levoit" and len(first["redditLinks"]) == 2
     assert second["thumbnail"] == "" and second["redditLinks"] == []
+
+    # Trend summaries: last bucket vs the mean of the earlier ones, with a dead zone.
+    assert _trend_summary([]) == ("no trend data", "flat")
+    assert _trend_summary([10, 20, 30]) == ("no trend data", "flat"), "needs 4+ points"
+    assert _trend_summary([10] * 12) == ("stable", "flat")
+    assert _trend_summary([10] * 11 + [50]) == ("+400% this week", "up")
+    assert _trend_summary([50] * 11 + [10]) == ("-80% this week", "down")
+    assert _trend_summary([0] * 11 + [30]) == ("new interest", "up")
+    assert _trend_summary([0] * 12) == ("no trend data", "flat")
+    # 14% swing sits inside the dead zone, 16% does not.
+    assert _trend_summary([100] * 11 + [114])[1] == "flat"
+    assert _trend_summary([100] * 11 + [116])[1] == "up"
     print("enrichment self-check OK")

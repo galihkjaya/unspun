@@ -11,11 +11,14 @@ import SearchBar from "@/app/components/SearchBar";
 import SearchHistory from "@/app/components/SearchHistory";
 import SummaryCard from "@/app/components/SummaryCard";
 import ThemeToggle from "@/app/components/ThemeToggle";
+import TrendBar from "@/app/components/TrendBar";
 import { useSearch } from "@/app/hooks/useSearch";
+import { useTrends } from "@/app/hooks/useTrends";
 
 export default function Home() {
   const { result, loading, error, history, settling, animate, search, retry, clearHistory, activeQuery } =
     useSearch();
+  const trends = useTrends(result);
   const [query, setQuery] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -97,6 +100,7 @@ export default function Home() {
 
           {!loading && !error && result && (
             <>
+              <TrendBar trends={trends} />
               <SummaryCard result={result} />
               <QuarantineZone quarantined={result.quarantined} />
               {result.recommendations.length > 0 ? (
@@ -106,6 +110,7 @@ export default function Home() {
                       key={`${item.rank}-${item.name}`}
                       item={item}
                       index={animate ? i : undefined}
+                      trend={trends.find((t) => t.name === item.name)}
                     />
                   ))}
                 </div>
