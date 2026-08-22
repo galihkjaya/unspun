@@ -33,6 +33,7 @@ from api.services.schemas import (
 app = FastAPI(title="Unspun API", docs_url=None, redoc_url=None)
 
 SEARCH_BUDGET = 6.5  # leaves ~2s for synthesis inside the 10s function limit
+FUNCTION_BUDGET = 9.0  # Vercel free tier kills the function at 10s
 AFFILIATE_MIN_BUDGET = 1.5
 TRENDS_BUDGET = 8.0  # /api/trends runs alone, so it gets most of the function limit
 
@@ -195,7 +196,8 @@ class PipelineError(Exception):
 
 async def _pipeline(query: str) -> dict:
     """The full search pipeline for one query. Raises PipelineError on failure."""
-    deadline = time.monotonic() + SEARCH_BUDGET
+    started = time.monotonic()
+    deadline = started + SEARCH_BUDGET
 
     async with serpapi_client.client() as client:
         organic_result, reddit_result, shopping_result = await asyncio.gather(
@@ -232,8 +234,11 @@ async def _pipeline(query: str) -> dict:
                 pass  # the savings comparison is a nice-to-have
 
     prompt = cerebras_client.build_prompt(query, quarantined, clean, reddit, shopping, affiliate_shopping)
+    synth_budget = max(cerebras_client.MIN_RETRY_BUDGET, FUNCTION_BUDGET - (time.monotonic() - started))
     try:
-        parsed = await cerebras_client.synthesize(prompt)
+        parsed = await cerebras_client.synthesize(
+            prompt, timeout=synth_budget, retry_budget=synth_budget - cerebras_client.MIN_RETRY_BUDGET
+        )
     except RateLimitError as exc:
         raise PipelineError(429, "Cerebras rate limit reached (5 requests/min). Wait a moment and retry.") from exc
     except ValueError as exc:

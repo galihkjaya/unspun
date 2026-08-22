@@ -16,6 +16,7 @@ from cerebras.cloud.sdk import AsyncCerebras, RateLimitError
 MAX_OUTPUT_TOKENS = 3000
 REASONING_EFFORT = "low"
 TIMEOUT = 8.0  # synthesis is the last step; the whole function must land under 10s
+MIN_RETRY_BUDGET = 2.0  # below this a strict retry cannot finish in time
 
 SYSTEM_PROMPT = (
     "You are Unspun, a search engine that strips affiliate marketing bias out of "
@@ -176,8 +177,13 @@ def normalize(parsed: dict, query: str, quarantined: list[dict]) -> dict:
     }
 
 
-async def synthesize(prompt: str) -> dict:
-    """One Cerebras call; on unparseable output, one stricter re-ask."""
+async def synthesize(prompt: str, *, timeout: float = TIMEOUT, retry_budget: float = TIMEOUT) -> dict:
+    """One Cerebras call; on unparseable output, one stricter re-ask if budget allows.
+
+    `timeout` and `retry_budget` are passed in by the caller because the whole
+    request has to land inside Vercel's 10s function limit — a retry that would
+    overrun is worse than returning the parse failure.
+    """
     api_key = os.environ.get("CEREBRAS_API_KEY")
     if not api_key:
         raise RuntimeError("CEREBRAS_API_KEY is not set")
@@ -186,7 +192,7 @@ async def synthesize(prompt: str) -> dict:
     # max_retries=0: the SDK's default is to retry a 429 with backoff, which would
     # blow past Vercel's function limit. Surface the rate limit to the caller and
     # let the user retry instead of holding the request open.
-    client = AsyncCerebras(api_key=api_key, timeout=TIMEOUT, max_retries=0)
+    client = AsyncCerebras(api_key=api_key, timeout=timeout, max_retries=0)
 
     async def ask(messages: list[dict]) -> str:
         completion = await client.chat.completions.create(
@@ -208,7 +214,10 @@ async def synthesize(prompt: str) -> dict:
     try:
         return parse_response(await ask(messages))
     except ValueError:
+        if retry_budget < MIN_RETRY_BUDGET:
+            raise
         # Strict retry. Counts against 5 RPM, so it only runs on a parse failure.
+        client.timeout = retry_budget
         return parse_response(
             await ask(
                 messages
