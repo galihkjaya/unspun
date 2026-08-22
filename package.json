@@ -1,0 +1,29 @@
+{
+  "name": "unspun",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "api": "./.venv/bin/uvicorn api.index:app --reload --port 8000 --env-file .env.local",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "check": "jiti app/lib/history.check.ts && ./.venv/bin/python api/services/bias_detector.py && ./.venv/bin/python api/services/cerebras_client.py"
+  },
+  "dependencies": {
+    "next": "16.3.2",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.2",
+    "jiti": "2.7.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
