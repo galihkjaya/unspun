@@ -7,11 +7,13 @@ export default function Landing({
   value,
   onChange,
   onSubmit,
+  onCompare,
   loading,
 }: {
   value: string;
   onChange: (value: string) => void;
   onSubmit: (query: string) => void;
+  onCompare: () => void;
   loading: boolean;
 }) {
   return (
@@ -44,6 +46,15 @@ export default function Landing({
                 </button>
               </li>
             ))}
+            <li>
+              <button
+                type="button"
+                onClick={onCompare}
+                className="rounded-full px-2 py-1.5 text-accent transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-accent/40"
+              >
+                or compare two →
+              </button>
+            </li>
           </ul>
 
           <ul className="mt-8 flex flex-wrap gap-2">
