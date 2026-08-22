@@ -16,6 +16,11 @@ class QuarantinedDomain(CamelModel):
     reason: str
 
 
+class RedditLink(CamelModel):
+    subreddit: str
+    url: str
+
+
 class Recommendation(CamelModel):
     rank: int
     name: str
@@ -25,6 +30,8 @@ class Recommendation(CamelModel):
     caveat: str
     price: float
     buy_url: str
+    thumbnail: str = ""
+    reddit_links: list[RedditLink] = []
 
 
 class SearchResult(CamelModel):

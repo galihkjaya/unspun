@@ -114,6 +114,7 @@ async def get_shopping(
                 "seller": r.get("source", ""),
                 "rating": r.get("rating"),
                 "link": r.get("product_link") or r.get("link") or "",
+                "thumbnail": r.get("thumbnail") or "",
             }
         )
         if len(items) >= num:

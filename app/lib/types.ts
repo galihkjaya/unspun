@@ -7,6 +7,11 @@ export interface QuarantinedDomain {
   reason: string;
 }
 
+export interface RedditLink {
+  subreddit: string;
+  url: string;
+}
+
 export interface Recommendation {
   rank: number;
   name: string;
@@ -16,6 +21,9 @@ export interface Recommendation {
   caveat: string;
   price: number;
   buyUrl: string;
+  /** Optional: older cached results predate these fields. */
+  thumbnail?: string;
+  redditLinks?: RedditLink[];
 }
 
 export interface SearchResult {

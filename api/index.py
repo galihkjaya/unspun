@@ -36,6 +36,61 @@ TIMEOUT_MESSAGE = (
 # "Coway Airmega 200M", "Levoit Core 300S" — brand + alphanumeric model.
 _PRODUCT_NAME = re.compile(r"\b([A-Z][A-Za-z]{2,} (?:[A-Z][A-Za-z]+ )?[A-Z0-9][\w-]*\d[\w-]*)\b")
 
+_STOPWORDS = {"the", "a", "an", "for", "with", "and", "of", "in", "on", "air", "pro", "plus", "mini", "max", "new"}
+_SUBREDDIT = re.compile(r"reddit\.com/r/([A-Za-z0-9_]+)")
+
+
+def _tokens(name: str) -> set[str]:
+    """Distinctive lowercase tokens of a product name ('Winix 5500-2' -> {'winix', '5500'})."""
+    raw = re.split(r"[^a-z0-9]+", name.lower())
+    return {t for t in raw if t and t not in _STOPWORDS and (t[0].isdigit() or len(t) > 1)}
+
+
+def _match_shopping(name: str, shopping: list[dict]) -> dict | None:
+    """Shopping item whose title shares the most distinctive tokens with the name."""
+    want = _tokens(name)
+    if not want:
+        return None
+    best, best_score = None, 0
+    for item in shopping:
+        score = len(want & _tokens(item.get("title", "")))
+        if score > best_score:
+            best, best_score = item, score
+    return best
+
+
+def _reddit_links_for(name: str, reddit: list[dict], limit: int = 3) -> list[dict]:
+    """Reddit threads that mention this product, as ``{subreddit, url}``."""
+    want = _tokens(name)
+    links: list[dict] = []
+    seen: set[str] = set()
+    for r in reddit:
+        url = r.get("link", "")
+        subreddit = _SUBREDDIT.search(url)
+        if not subreddit or url in seen:
+            continue
+        # Tokens already exclude stopwords and single letters, so one shared token
+        # is a brand or model number — enough to count the thread as evidence.
+        if not want & _tokens(f"{r.get('title', '')} {r.get('snippet', '')}"):
+            continue
+        seen.add(url)
+        links.append({"subreddit": f"r/{subreddit.group(1)}", "url": url})
+        if len(links) >= limit:
+            break
+    return links
+
+
+def _enrich(result: dict, shopping: list[dict], reddit: list[dict]) -> dict:
+    """Attach thumbnails and Reddit evidence to each recommendation.
+
+    Keys are camelCase to match the rest of ``normalize``'s output.
+    """
+    for rec in result.get("recommendations", []):
+        item = _match_shopping(rec["name"], shopping)
+        rec["thumbnail"] = (item or {}).get("thumbnail", "")
+        rec["redditLinks"] = _reddit_links_for(rec["name"], reddit)
+    return result
+
 
 def _affiliate_pick(items: list[dict], quarantined_domains: set[str]) -> str | None:
     """First product-looking name mentioned by a quarantined source, if any."""
@@ -116,4 +171,40 @@ async def search(body: SearchRequest):
     except Exception as exc:  # noqa: BLE001 — surface a message, never a stack trace
         return _error(502, f"Synthesis failed: {type(exc).__name__}")
 
-    return cerebras_client.normalize(parsed, query, quarantined)
+    return _enrich(cerebras_client.normalize(parsed, query, quarantined), shopping, reddit)
+
+
+if __name__ == "__main__":
+    # Self-check for the enrichment matchers (no network, no app startup).
+    shopping_fixture = [
+        {"title": "Levoit Core 300S True HEPA Air Purifier", "thumbnail": "https://img/levoit"},
+        {"title": "Winix 5500-2 Air Cleaner", "thumbnail": "https://img/winix"},
+        {"title": "Generic Desk Fan", "thumbnail": "https://img/fan"},
+    ]
+    assert _match_shopping("Levoit Core 300S", shopping_fixture)["thumbnail"] == "https://img/levoit"
+    assert _match_shopping("Winix 5500-2", shopping_fixture)["thumbnail"] == "https://img/winix"
+    assert _match_shopping("Coway Airmega 400", shopping_fixture) is None, "no shared token must not match"
+    # "Air Purifier" is all stopwords/generic, so it must not match the fan.
+    assert _match_shopping("Air", shopping_fixture) is None
+
+    reddit_fixture = [
+        {"title": "Levoit Core 300S worth it?", "link": "https://reddit.com/r/AirPurifiers/a", "snippet": ""},
+        {"title": "duplicate url", "link": "https://reddit.com/r/AirPurifiers/a", "snippet": "levoit"},
+        {"title": "Best purifier?", "link": "https://reddit.com/r/HVAC/b", "snippet": "I run a Levoit daily"},
+        {"title": "Unrelated", "link": "https://reddit.com/r/cars/c", "snippet": "tires"},
+        {"title": "No subreddit", "link": "https://example.com/levoit", "snippet": "levoit"},
+    ]
+    links = _reddit_links_for("Levoit Core 300S", reddit_fixture)
+    assert [x["subreddit"] for x in links] == ["r/AirPurifiers", "r/HVAC"], links
+    assert _reddit_links_for("Dyson TP07", reddit_fixture) == []
+    assert len(_reddit_links_for("Levoit", reddit_fixture, limit=1)) == 1
+
+    enriched = _enrich(
+        {"recommendations": [{"name": "Levoit Core 300S"}, {"name": "Nothing Matches XZ9"}]},
+        shopping_fixture,
+        reddit_fixture,
+    )
+    first, second = enriched["recommendations"]
+    assert first["thumbnail"] == "https://img/levoit" and len(first["redditLinks"]) == 2
+    assert second["thumbnail"] == "" and second["redditLinks"] == []
+    print("enrichment self-check OK")
