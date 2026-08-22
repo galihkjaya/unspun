@@ -17,10 +17,12 @@ export default function Landing({
   return (
     <>
       <section className="flex min-h-[88svh] flex-col justify-center py-16">
-        <h1 className="text-5xl font-bold tracking-tight text-ink sm:text-7xl">Unspun.</h1>
-        <p className="mt-3 text-lg text-muted sm:text-xl">Search without the sales pitch.</p>
+        <h1 className="animate-rise text-5xl font-bold tracking-tighter text-ink sm:text-7xl">Unspun.</h1>
+        <p className="animate-rise mt-3 text-lg text-muted sm:text-xl" style={{ animationDelay: "60ms" }}>
+          Search without the sales pitch.
+        </p>
 
-        <div className="mt-10 max-w-2xl">
+        <div className="animate-rise mt-10 max-w-2xl" style={{ animationDelay: "120ms" }}>
           <SearchBar
             value={value}
             onChange={onChange}
@@ -64,7 +66,15 @@ export default function Landing({
           What Google shows you versus what Unspun shows you
         </h2>
 
-        <div className="grid gap-6 sm:grid-cols-2 sm:gap-10">
+        <div className="relative grid gap-10 sm:grid-cols-2 sm:gap-12">
+          {/* Sits in the gutter between the two columns on wide screens. */}
+          <span
+            aria-hidden="true"
+            className="absolute top-12 left-1/2 hidden -translate-x-1/2 text-xl text-accent sm:block"
+          >
+            →
+          </span>
+
           <div className="opacity-60">
             <p className="font-mono text-xs tracking-widest text-muted uppercase">What Google shows you</p>
             <ul className="mt-5 space-y-3">
