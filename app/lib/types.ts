@@ -43,6 +43,16 @@ export interface SearchHistoryEntry {
   result: SearchResult;
 }
 
+export type TrendDirection = "up" | "down" | "flat";
+
+export interface Trend {
+  name: string;
+  /** Relative search interest, 0-100, oldest to newest. Empty when unavailable. */
+  data: number[];
+  change: string;
+  direction: TrendDirection;
+}
+
 export const HISTORY_KEY = "search_history";
 export const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 export const DEFAULT_QUERY = "best air purifier for small room";

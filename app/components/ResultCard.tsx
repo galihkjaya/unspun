@@ -1,4 +1,6 @@
-import type { Recommendation, Sentiment } from "@/app/lib/types";
+import Sparkline from "@/app/components/Sparkline";
+import { TrendBadge } from "@/app/components/TrendBar";
+import type { Recommendation, Sentiment, Trend } from "@/app/lib/types";
 
 const SENTIMENT: Record<Sentiment, { label: string; className: string }> = {
   positive: { label: "Positive", className: "text-positive" },
@@ -32,7 +34,15 @@ function Thumbnail({ item }: { item: Recommendation }) {
   );
 }
 
-export default function ResultCard({ item, index }: { item: Recommendation; index?: number }) {
+export default function ResultCard({
+  item,
+  index,
+  trend,
+}: {
+  item: Recommendation;
+  index?: number;
+  trend?: Trend;
+}) {
   const sentiment = SENTIMENT[item.sentiment];
   const links = item.redditLinks ?? [];
   // No index means a cached result: render instantly, no entrance animation.
@@ -68,6 +78,16 @@ export default function ResultCard({ item, index }: { item: Recommendation; inde
               <span className="font-mono">{item.mentions}</span> Reddit{" "}
               {item.mentions === 1 ? "mention" : "mentions"}
             </span>
+            {trend && trend.data.length >= 2 && (
+              <span className="flex items-center gap-2">
+                <Sparkline
+                  data={trend.data}
+                  direction={trend.direction}
+                  label={`Search interest for ${item.name}: ${trend.change}`}
+                />
+                <TrendBadge trend={trend} />
+              </span>
+            )}
           </div>
         </div>
       </div>

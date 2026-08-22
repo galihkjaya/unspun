@@ -120,3 +120,70 @@ async def get_shopping(
         if len(items) >= num:
             break
     return items
+
+
+async def get_trends(
+    client: httpx.AsyncClient, product_name: str, *, timeout: float = DEFAULT_TIMEOUT, points: int = 12
+) -> list[int]:
+    """Google Trends interest for a product name, downsampled to `points` values.
+
+    The 3-month TIMESERIES returns ~90 daily points on a 0-100 scale; a sparkline
+    only needs a dozen, so consecutive days are averaged into buckets.
+    """
+    payload = await _get(
+        client,
+        {
+            "engine": "google_trends",
+            "q": product_name,
+            "data_type": "TIMESERIES",
+            "date": "today 3-m",
+            "hl": "en",
+            "geo": "US",
+        },
+        timeout,
+    )
+
+    series = [
+        value
+        for entry in payload.get("interest_over_time", {}).get("timeline_data", [])
+        for value in [_first_value(entry)]
+        if value is not None
+    ]
+    return _downsample(series, points)
+
+
+def _first_value(entry: dict) -> int | None:
+    for value in entry.get("values", []):
+        extracted = value.get("extracted_value")
+        if isinstance(extracted, int) and not isinstance(extracted, bool):
+            return extracted
+    return None
+
+
+def _downsample(series: list[int], points: int) -> list[int]:
+    """Average `series` into at most `points` buckets, preserving order."""
+    if len(series) <= points:
+        return series
+    size = len(series) / points
+    return [
+        round(sum(bucket) / len(bucket))
+        for i in range(points)
+        for bucket in [series[round(i * size) : round((i + 1) * size)] or [series[-1]]]
+    ]
+
+
+if __name__ == "__main__":
+    assert _downsample([1, 2, 3], 12) == [1, 2, 3], "shorter than target is passed through"
+    assert _downsample([], 12) == []
+    assert _downsample(list(range(1, 13)), 12) == list(range(1, 13))
+    # 24 points into 12 buckets averages each adjacent pair.
+    assert _downsample([0, 10] * 12, 12) == [5] * 12
+    assert len(_downsample(list(range(93)), 12)) == 12
+    # Averaging dilutes a late spike but must still lift the final bucket off zero.
+    assert _downsample([0] * 90 + [100] * 3, 12)[-1] > 0
+
+    assert _first_value({"values": [{"extracted_value": 42}]}) == 42
+    assert _first_value({"values": [{"value": "42"}]}) is None, "string-only payload is unusable"
+    assert _first_value({"values": [{"extracted_value": True}]}) is None, "bool is not a reading"
+    assert _first_value({}) is None
+    print("serpapi_client self-check OK")
