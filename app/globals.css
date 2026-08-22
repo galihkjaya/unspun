@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+/* Light is the default; dark applies from system preference unless the user has
+   explicitly chosen light. [data-theme] set by the inline script in layout.tsx
+   always wins. */
+:root {
+  --bg-primary: #fafafa;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f4f4f5;
+  --border: #e4e4e7;
+  --text-primary: #09090b;
+  --text-secondary: #71717a;
+  --accent: #4f46e5;
+  --accent-glow: rgba(79, 70, 229, 0.08);
+  --positive: #16a34a;
+  --negative: #dc2626;
+  --mixed: #d97706;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-primary: #080808;
+    --bg-card: #111111;
+    --bg-card-hover: #1a1a1a;
+    --border: #222222;
+    --text-primary: #f0f0f0;
+    --text-secondary: #666666;
+    --accent: #6366f1;
+    --accent-glow: rgba(99, 102, 241, 0.15);
+    --positive: #22c55e;
+    --negative: #ef4444;
+    --mixed: #f59e0b;
+  }
+}
+
+[data-theme="dark"] {
+  --bg-primary: #080808;
+  --bg-card: #111111;
+  --bg-card-hover: #1a1a1a;
+  --border: #222222;
+  --text-primary: #f0f0f0;
+  --text-secondary: #666666;
+  --accent: #6366f1;
+  --accent-glow: rgba(99, 102, 241, 0.15);
+  --positive: #22c55e;
+  --negative: #ef4444;
+  --mixed: #f59e0b;
+}
+
+/* `inline` so the utilities resolve the live var and react to a theme switch. */
+@theme inline {
+  --color-bg: var(--bg-primary);
+  --color-card: var(--bg-card);
+  --color-card-hover: var(--bg-card-hover);
+  --color-line: var(--border);
+  --color-ink: var(--text-primary);
+  --color-muted: var(--text-secondary);
+  --color-accent: var(--accent);
+  --color-glow: var(--accent-glow);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-mixed: var(--mixed);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono-stack), ui-monospace, monospace;
+
+  --animate-rise: rise 300ms ease-out both;
+  --animate-blink: blink 1s step-end infinite;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Safari keeps its own disclosure triangle even with list-style: none. */
+summary::-webkit-details-marker {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

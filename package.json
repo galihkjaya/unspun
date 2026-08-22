@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "check": "jiti app/lib/history.check.ts && ./.venv/bin/python api/services/bias_detector.py && ./.venv/bin/python api/services/cerebras_client.py"
+    "check": "jiti app/lib/history.check.ts && ./.venv/bin/python api/services/bias_detector.py && ./.venv/bin/python api/services/serpapi_client.py && ./.venv/bin/python api/services/cerebras_client.py && ./.venv/bin/python -m api.index"
   },
   "dependencies": {
     "next": "16.3.2",
