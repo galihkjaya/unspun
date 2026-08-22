@@ -3,77 +3,96 @@
 import { useState } from "react";
 
 import ErrorState from "@/app/components/ErrorState";
-import LoadingSkeleton from "@/app/components/LoadingSkeleton";
+import Landing from "@/app/components/Landing";
+import LoadingSequence from "@/app/components/LoadingSequence";
 import QuarantineZone from "@/app/components/QuarantineZone";
 import ResultCard from "@/app/components/ResultCard";
 import SearchBar from "@/app/components/SearchBar";
 import SearchHistory from "@/app/components/SearchHistory";
 import SummaryCard from "@/app/components/SummaryCard";
+import ThemeToggle from "@/app/components/ThemeToggle";
 import { useSearch } from "@/app/hooks/useSearch";
-import { DEFAULT_QUERY } from "@/app/lib/types";
-
-const EXAMPLES = [DEFAULT_QUERY, "best budget robot vacuum", "best mechanical keyboard under $100"];
 
 export default function Home() {
-  const { result, loading, error, history, search, retry, clearHistory, activeQuery } = useSearch();
+  const { result, loading, error, history, settling, animate, search, retry, clearHistory, activeQuery } =
+    useSearch();
+  const [query, setQuery] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
-  const idle = !result && !loading && !error;
+
+  const submit = (next: string) => {
+    if (next.trim().length >= 2) void search(next.trim());
+  };
+
+  const pickHistory = (next: string) => {
+    setQuery(next);
+    setHistoryOpen(false);
+    void search(next);
+  };
+
+  // The landing page owns the viewport until there is something to show.
+  const landing = !result && !loading && !error;
+
+  const historyPanel = (
+    <SearchHistory entries={history} activeQuery={activeQuery} onSelect={pickHistory} onClear={clearHistory} />
+  );
+
+  if (landing) {
+    return (
+      <div className="mx-auto w-full max-w-6xl px-5 sm:px-8">
+        <div className="flex justify-end pt-5">
+          <ThemeToggle />
+        </div>
+        <Landing value={query} onChange={setQuery} onSubmit={submit} loading={loading} />
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
-      {/* Mobile/tablet: sticky search. Desktop: static header above the two-column grid. */}
-      <header className="sticky top-0 z-10 -mx-4 border-b border-line bg-canvas/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:pt-10 lg:pb-6 lg:backdrop-blur-none">
-        <div className="flex items-center gap-3 lg:flex-col lg:items-stretch lg:gap-4">
-          <div className="flex items-baseline gap-2 lg:justify-center">
-            <span className="text-xl font-bold tracking-tight text-ink lg:text-3xl">Unspun</span>
-            <span className="hidden text-sm text-muted sm:inline">Search without the sales pitch.</span>
+    <div className="mx-auto w-full max-w-6xl px-5 sm:px-8">
+      <header className="sticky top-0 z-10 -mx-5 border-b border-line bg-bg/90 px-5 py-3 backdrop-blur sm:-mx-8 sm:px-8 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:py-6 lg:backdrop-blur-none">
+        <div className="flex items-center gap-3">
+          <span className="shrink-0 text-lg font-bold tracking-tight text-ink lg:text-xl">
+            Unspun<span className="text-accent">.</span>
+          </span>
+          <div className="min-w-0 flex-1">
+            <SearchBar
+              value={query}
+              onChange={setQuery}
+              onSubmit={() => submit(query)}
+              loading={loading}
+              size="sm"
+            />
           </div>
-          <div className="min-w-0 flex-1 lg:mx-auto lg:w-full lg:max-w-2xl">
-            <SearchBar onSearch={(q) => void search(q)} loading={loading} initialQuery={activeQuery ?? ""} />
-          </div>
+          <ThemeToggle />
         </div>
       </header>
 
-      <div className="lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-8">
-        {/* Desktop sidebar */}
+      <div className="pb-20 lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-8">
         <aside className="hidden lg:block">
-          <div className="sticky top-6">
-            <SearchHistory
-              entries={history}
-              activeQuery={activeQuery}
-              onSelect={(q) => void search(q)}
-              onClear={clearHistory}
-            />
-          </div>
+          <div className="sticky top-6">{historyPanel}</div>
         </aside>
 
         <main className="mt-5 min-w-0 space-y-4 lg:mt-0">
-          {/* Tablet/mobile: history behind a toggle */}
           <div className="lg:hidden">
             <button
               type="button"
               onClick={() => setHistoryOpen((open) => !open)}
               aria-expanded={historyOpen}
-              className="rounded-full border border-line px-4 py-2 text-sm font-semibold text-muted focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="rounded-full border border-line px-4 py-2 text-sm text-muted transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               Recent searches {history.length > 0 && `(${history.length})`}
             </button>
-            {historyOpen && (
-              <div className="mt-3">
-                <SearchHistory
-                  entries={history}
-                  activeQuery={activeQuery}
-                  onSelect={(q) => {
-                    setHistoryOpen(false);
-                    void search(q);
-                  }}
-                  onClear={clearHistory}
-                />
-              </div>
-            )}
+            {historyOpen && <div className="mt-3">{historyPanel}</div>}
           </div>
 
-          {loading && <LoadingSkeleton />}
+          {loading && (
+            <LoadingSequence
+              query={query || activeQuery || ""}
+              quarantined={settling?.quarantined ?? null}
+              done={settling !== null}
+            />
+          )}
+
           {!loading && error && <ErrorState message={error} onRetry={retry} />}
 
           {!loading && !error && result && (
@@ -82,41 +101,20 @@ export default function Home() {
               <QuarantineZone quarantined={result.quarantined} />
               {result.recommendations.length > 0 ? (
                 <div className="space-y-3">
-                  {result.recommendations.map((item) => (
-                    <ResultCard key={`${item.rank}-${item.name}`} item={item} />
+                  {result.recommendations.map((item, i) => (
+                    <ResultCard
+                      key={`${item.rank}-${item.name}`}
+                      item={item}
+                      index={animate ? i : undefined}
+                    />
                   ))}
                 </div>
               ) : (
-                <p className="rounded-2xl border border-line bg-surface p-5 text-sm text-muted">
+                <p className="rounded-xl border border-line bg-card p-5 text-sm text-muted">
                   No product had enough community support to rank. Try a more specific query.
                 </p>
               )}
             </>
-          )}
-
-          {idle && (
-            <section className="rounded-2xl border border-line bg-surface p-5 sm:p-8">
-              <h2 className="text-base font-semibold text-ink">
-                Google ranks affiliate listicles first. This ranks what people actually own.
-              </h2>
-              <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">
-                Unspun strips commission-driven publishers out of the results, reads the Reddit discussion underneath,
-                then prices the community favourite against the affiliate pick.
-              </p>
-              <ul className="mt-5 flex flex-wrap gap-2">
-                {EXAMPLES.map((example) => (
-                  <li key={example}>
-                    <button
-                      type="button"
-                      onClick={() => void search(example)}
-                      className="rounded-full border border-line bg-canvas px-3.5 py-2 text-sm text-ink hover:border-accent/50 hover:text-accent focus-visible:ring-2 focus-visible:ring-accent/40"
-                    >
-                      {example}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
           )}
         </main>
       </div>

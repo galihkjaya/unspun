@@ -1,48 +1,62 @@
 "use client";
 
-import { useState } from "react";
-
 export default function SearchBar({
-  onSearch,
+  value,
+  onChange,
+  onSubmit,
   loading,
-  initialQuery = "",
+  autoFocus = false,
+  id = "q",
+  label = "Search for a product",
+  placeholder = "best air purifier for small room",
+  size = "lg",
 }: {
-  onSearch: (query: string) => void;
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
   loading: boolean;
-  initialQuery?: string;
+  autoFocus?: boolean;
+  id?: string;
+  label?: string;
+  placeholder?: string;
+  size?: "lg" | "sm";
 }) {
-  const [value, setValue] = useState(initialQuery);
-  const trimmed = value.trim();
+  const big = size === "lg";
 
   return (
     <form
       role="search"
       onSubmit={(e) => {
         e.preventDefault();
-        if (trimmed.length >= 2 && !loading) onSearch(trimmed);
+        if (value.trim().length >= 2 && !loading) onSubmit();
       }}
-      className="flex gap-2"
+      className="flex items-center gap-2"
     >
-      <label htmlFor="q" className="sr-only">
-        Search for a product
+      <label htmlFor={id} className="sr-only">
+        {label}
       </label>
       <input
-        id="q"
-        name="q"
+        id={id}
+        name={id}
         type="search"
         value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder="best air purifier for small room"
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
         autoComplete="off"
         enterKeyHint="search"
-        className="min-w-0 flex-1 rounded-full border border-line bg-canvas px-5 py-3 text-base text-ink shadow-sm outline-none placeholder:text-muted/70 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/30"
+        autoFocus={autoFocus}
+        className={`min-w-0 flex-1 rounded-full border border-line bg-card text-ink transition-[border-color,box-shadow] outline-none placeholder:text-muted focus:border-accent focus:shadow-[0_0_0_4px_var(--accent-glow)] ${
+          big ? "px-5 py-3.5 text-base" : "px-4 py-2.5 text-sm"
+        }`}
       />
       <button
         type="submit"
-        disabled={loading || trimmed.length < 2}
-        className="shrink-0 rounded-full bg-accent px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 sm:px-7"
+        disabled={loading || value.trim().length < 2}
+        className={`shrink-0 rounded-full bg-accent font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 ${
+          big ? "px-6 py-3.5 text-sm" : "px-4 py-2.5 text-sm"
+        }`}
       >
-        {loading ? "Unspinning…" : "Unspin"}
+        {loading ? "Unspinning…" : big ? "Unspin →" : "Unspin"}
       </button>
     </form>
   );
