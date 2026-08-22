@@ -114,7 +114,8 @@ export default function ResultCard({
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-full border border-line px-2.5 py-1 text-muted transition-colors hover:border-accent/50 hover:text-accent"
+              // py-2 keeps the tap target at ~32px on mobile.
+              className="rounded-full border border-line px-2.5 py-2 text-muted transition-colors hover:border-accent/50 hover:text-accent"
             >
               {link.subreddit} thread ↗
             </a>
