@@ -23,8 +23,9 @@ export const viewport: Viewport = {
 };
 
 // Runs before first paint so a stored theme never flashes the wrong palette.
-// No value stored means the CSS falls through to prefers-color-scheme.
-const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}})()`;
+// Dark is the default; only an explicit "light" needs marking. Sets both the
+// legacy [data-theme] attribute and the .light-mode class the UI reads.
+const THEME_SCRIPT = `(function(){try{if(localStorage.getItem("theme")==="light"){document.documentElement.setAttribute("data-theme","light")}}catch(e){}})()`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

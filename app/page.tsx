@@ -6,6 +6,7 @@ import CompareBar from "@/app/components/CompareBar";
 import CompareView from "@/app/components/CompareView";
 import ErrorState from "@/app/components/ErrorState";
 import LoadingSequence from "@/app/components/LoadingSequence";
+import Logo from "@/app/components/Logo";
 import QuarantineZone from "@/app/components/QuarantineZone";
 import ResultCard from "@/app/components/ResultCard";
 import SearchBar from "@/app/components/SearchBar";
@@ -87,9 +88,7 @@ export default function Home() {
       <div className="relative">
         <nav className="glass-card fixed inset-x-0 top-0 z-20 rounded-none border-x-0 border-t-0">
           <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
-            <span className="font-serif text-xl font-bold tracking-tight text-ink">
-              Unspun<span className="serif-italic">.</span>
-            </span>
+            <Logo />
             <div className="hidden items-center gap-8 text-sm sm:flex">
               <a href="#how-it-works" className="text-muted transition-colors hover:text-ink">
                 How it works
