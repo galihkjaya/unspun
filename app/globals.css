@@ -66,6 +66,7 @@
 
   --animate-rise: rise 300ms ease-out both;
   --animate-blink: blink 1s step-end infinite;
+  --animate-reveal: reveal 350ms ease-out both;
 }
 
 @keyframes rise {
@@ -83,6 +84,62 @@
   50% {
     opacity: 0;
   }
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Loading box: the animated angle custom property drives a conic gradient
+   behind a transparent border, so a highlight appears to walk clockwise. */
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes rotate-border {
+  to {
+    --angle: 360deg;
+  }
+}
+
+.loading-neon {
+  /* Deliberately theme-independent: the neon console stays dark in both themes. */
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(#111111, #111111) padding-box,
+    linear-gradient(var(--angle), #6366f1, #818cf8, #6366f1) border-box;
+  box-shadow:
+    0 0 24px rgba(99, 102, 241, 0.4),
+    0 0 48px rgba(99, 102, 241, 0.2);
+  animation: rotate-border 2s linear infinite;
+}
+
+/* Favicon flight: starts ~80px off the box edge (offsets set inline per
+   flight), gets absorbed into the center. Delay handled here so each spawn
+   waits 200ms after its status message appears. */
+@keyframes favicon-absorb {
+  from {
+    opacity: 1;
+    transform: translate(var(--from-x), var(--from-y)) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.2);
+  }
+}
+
+.neon-favicon {
+  animation: favicon-absorb 800ms ease-in both;
+  animation-delay: 200ms;
 }
 
 html {

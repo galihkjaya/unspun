@@ -1,7 +1,8 @@
 "use client";
 
 import SearchBar from "@/app/components/SearchBar";
-import { DEMO_QUERIES, GOOGLE_RESULTS, STATS, STEPS } from "@/app/lib/copy";
+import StatsBar from "@/app/components/StatsBar";
+import { DEMO_QUERIES, GOOGLE_RESULTS, STEPS } from "@/app/lib/copy";
 
 export default function Landing({
   value,
@@ -57,18 +58,9 @@ export default function Landing({
             </li>
           </ul>
 
-          <ul className="mt-8 flex flex-wrap gap-2">
-            {STATS.map((stat) => (
-              <li
-                key={stat.label}
-                className="flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs text-muted"
-              >
-                <span aria-hidden="true">{stat.icon}</span>
-                <span className="font-mono font-medium text-ink">{stat.value}</span>
-                <span>{stat.label}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-8">
+            <StatsBar />
+          </div>
         </div>
       </section>
 

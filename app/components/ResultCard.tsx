@@ -51,9 +51,9 @@ export default function ResultCard({
   return (
     <article
       className={`rounded-xl border border-line bg-card p-4 transition-colors hover:bg-card-hover sm:p-5 ${
-        staggered ? "animate-rise" : ""
+        staggered ? "animate-reveal" : ""
       }`}
-      style={staggered ? { animationDelay: `${Math.min(index, 5) * 80}ms` } : undefined}
+      style={staggered ? { animationDelay: `${index * 150}ms` } : undefined}
     >
       <div className="flex gap-4">
         <Thumbnail item={item} />
