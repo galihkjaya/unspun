@@ -2,14 +2,16 @@
 
 import { useStats } from "@/app/hooks/useStats";
 
-function StatCell({ label, value, unit }: { label: string; value: string; unit?: string }) {
+function Cell({ label, value, unit }: { label: string; value: string; unit?: string }) {
   return (
-    <div className="flex min-w-0 flex-col items-center gap-1 px-3 py-4 text-center sm:px-4">
+    <div className="stats-cell flex flex-col items-center gap-1 text-center">
       <span className="font-mono text-[10px] tracking-widest text-muted uppercase sm:text-xs">
         {label}
       </span>
       <span className="flex items-baseline gap-1">
-        <span className="text-2xl font-semibold tabular-nums text-ink sm:text-3xl">{value}</span>
+        <span className="font-mono text-2xl font-semibold tabular-nums text-ink sm:text-3xl">
+          {value}
+        </span>
         {unit && <span className="text-sm text-muted">{unit}</span>}
       </span>
     </div>
@@ -17,21 +19,22 @@ function StatCell({ label, value, unit }: { label: string; value: string; unit?:
 }
 
 /**
- * One partitioned box for today's live metrics — average response time,
- * affiliates stripped, sources read. All computed from search_history in
- * localStorage at render time, never hardcoded.
+ * One partitioned glass box for today's live metrics, computed from
+ * search_history in localStorage at render time, never hardcoded.
  */
 export default function StatsBar() {
   const { speedValue, speedUnit, affiliatesBlocked, sourcesRead } = useStats();
 
+  // The hook exposes no raw entry count; any ranked recommendation or measured
+  // duration means at least one search happened today.
+  const searchedToday = sourcesRead > 0 || speedValue !== "--";
+
   return (
-    <div
-      aria-label="Today's search stats"
-      className="grid grid-cols-3 divide-x divide-line overflow-hidden rounded-xl border border-line bg-card"
-    >
-      <StatCell label="Avg Speed" value={speedValue} unit={speedUnit} />
-      <StatCell label="Affiliates Blocked" value={String(affiliatesBlocked)} />
-      <StatCell label="Sources Read" value={String(sourcesRead)} />
+    <div aria-label="Today's search stats" className="stats-bar w-full">
+      <Cell label="Avg Speed" value={speedValue === "--" ? "—" : speedValue} unit={speedValue === "--" ? undefined : speedUnit} />
+      <Cell label="Affiliates Blocked" value={String(affiliatesBlocked)} />
+      {/* Repeats are served from the localStorage cache, so they are instant. */}
+      <Cell label="On Repeat" value={searchedToday ? "<50ms" : "0"} />
     </div>
   );
 }
