@@ -1,50 +1,41 @@
 @import "tailwindcss";
 
-/* Light is the default; dark applies from system preference unless the user has
-   explicitly chosen light. [data-theme] set by the inline script in layout.tsx
-   always wins. */
+/* Monochrome palette, dark by default. Light activates via the legacy
+   [data-theme] attribute or the .light-mode class — the toggle keeps both in
+   sync so every consumer (old utilities, new glass classes) moves together. */
 :root {
-  --bg-primary: #fafafa;
-  --bg-card: #ffffff;
-  --bg-card-hover: #f4f4f5;
-  --border: #e4e4e7;
-  --text-primary: #09090b;
-  --text-secondary: #71717a;
-  --accent: #4f46e5;
-  --accent-glow: rgba(79, 70, 229, 0.08);
-  --positive: #16a34a;
-  --negative: #dc2626;
-  --mixed: #d97706;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg-primary: #080808;
-    --bg-card: #111111;
-    --bg-card-hover: #1a1a1a;
-    --border: #222222;
-    --text-primary: #f0f0f0;
-    --text-secondary: #666666;
-    --accent: #6366f1;
-    --accent-glow: rgba(99, 102, 241, 0.15);
-    --positive: #22c55e;
-    --negative: #ef4444;
-    --mixed: #f59e0b;
-  }
-}
-
-[data-theme="dark"] {
   --bg-primary: #080808;
   --bg-card: #111111;
   --bg-card-hover: #1a1a1a;
-  --border: #222222;
+  --border: #1f1f1f;
   --text-primary: #f0f0f0;
-  --text-secondary: #666666;
+  --text-secondary: #555555;
   --accent: #6366f1;
   --accent-glow: rgba(99, 102, 241, 0.15);
   --positive: #22c55e;
   --negative: #ef4444;
   --mixed: #f59e0b;
+
+  --glass-bg: rgba(17, 17, 17, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.07);
+}
+
+[data-theme="light"],
+.light-mode {
+  --bg-primary: #f9f9f9;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f4f4f5;
+  --border: #e5e5e5;
+  --text-primary: #0a0a0a;
+  --text-secondary: #888888;
+  --accent: #4f46e5;
+  --accent-glow: rgba(79, 70, 229, 0.08);
+  --positive: #16a34a;
+  --negative: #dc2626;
+  --mixed: #d97706;
+
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(0, 0, 0, 0.07);
 }
 
 /* `inline` so the utilities resolve the live var and react to a theme switch. */
@@ -62,6 +53,7 @@
   --color-mixed: var(--mixed);
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-playfair), Georgia, "Times New Roman", serif;
   --font-mono: var(--font-mono-stack), ui-monospace, monospace;
 
   --animate-rise: rise 300ms ease-out both;
@@ -148,8 +140,127 @@ html {
 }
 
 body {
-  background: var(--bg-primary);
+  background-color: var(--bg-primary);
   color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  transition:
+    background-color 0.3s,
+    color 0.3s;
+}
+
+/* Frosted panel used across the landing page. */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="light"] .glass-card,
+.light-mode .glass-card {
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.bg-grid {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  mask-image: linear-gradient(to bottom, black 30%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 30%, transparent 100%);
+}
+
+[data-theme="light"] .bg-grid,
+.light-mode .bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+}
+
+.stats-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.stats-cell {
+  padding: 20px 28px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.stats-cell + .stats-cell {
+  border-left: 1px solid var(--glass-border);
+}
+
+.serif-italic {
+  font-family: "Playfair Display", var(--font-playfair), Georgia, serif;
+  font-style: italic;
+}
+
+.chip {
+  border: 1px solid var(--border);
+  color: var(--muted, var(--text-secondary));
+  background: transparent;
+  font-size: 13px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.chip:hover {
+  border-color: var(--muted, var(--text-secondary));
+  color: var(--text-primary);
+}
+
+.search-input {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+.search-input::placeholder {
+  color: var(--muted, var(--text-secondary));
+}
+.search-input:focus {
+  outline: none;
+  border-color: rgba(150, 150, 150, 0.4);
+  box-shadow: 0 0 0 3px rgba(150, 150, 150, 0.08);
+}
+
+.btn-primary {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  transition: opacity 0.2s;
+}
+.btn-primary:hover {
+  opacity: 0.85;
+}
+
+.feature-card {
+  transition:
+    border-color 0.25s,
+    transform 0.25s;
+}
+.feature-card:hover {
+  border-color: rgba(150, 150, 150, 0.3);
+  transform: translateY(-2px);
+}
+
+.divider {
+  border-color: var(--border);
 }
 
 /* Safari keeps its own disclosure triangle even with list-style: none. */
