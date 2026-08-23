@@ -7,7 +7,7 @@ import { addEntry, findCached } from "@/app/lib/history";
 import { HISTORY_KEY, type SearchHistoryEntry, type SearchResult } from "@/app/lib/types";
 
 const EMPTY: SearchHistoryEntry[] = []; // stable reference for useLocalStorage
-const DONE_BEAT_MS = 550; // lets the "Done." line land before results replace it
+const DONE_BEAT_MS = 550; // covers the loading box's 300ms fade-out before results reveal
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

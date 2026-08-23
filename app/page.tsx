@@ -132,13 +132,7 @@ export default function Home() {
             {historyOpen && <div className="mt-3">{historyPanel}</div>}
           </div>
 
-          {busy && (
-            <LoadingSequence
-              query={comparing ? `${query} vs ${queryB}` : query || activeQuery || ""}
-              quarantined={settling?.quarantined ?? null}
-              done={settling !== null}
-            />
-          )}
+          {busy && <LoadingSequence done={settling !== null} />}
 
           {!busy && comparing && compare.error && (
             <ErrorState
