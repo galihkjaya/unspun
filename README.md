@@ -1,4 +1,3 @@
-```markdown
 <p align="center">
   <img src="public/unspun-banner.png" alt="Unspun" width="100%" />
 </p>
@@ -211,4 +210,3 @@ scripts/                      self-check scripts
 <p align="center">
   Built for the DevNetwork [API + Cloud + AI] Hackathon 2026 · SerpApi "Best AI Use Case"
 </p>
-```
