@@ -206,7 +206,3 @@ scripts/                      self-check scripts
 - Support for non-English queries
 
 ---
-
-<p align="center">
-  Built for the DevNetwork [API + Cloud + AI] Hackathon 2026 · SerpApi "Best AI Use Case"
-</p>
