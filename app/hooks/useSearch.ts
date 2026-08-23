@@ -45,6 +45,7 @@ export function useSearch() {
 
       setAnimate(true);
       setLoading(true);
+      const startedAt = performance.now();
       try {
         const response = await fetch("/api/search", {
           method: "POST",
@@ -65,7 +66,13 @@ export function useSearch() {
 
         const fresh = payload as SearchResult;
         setHistory((prev) =>
-          addEntry(prev, { id: crypto.randomUUID(), query, timestamp: fresh.timestamp, result: fresh }),
+          addEntry(prev, {
+            id: crypto.randomUUID(),
+            query,
+            timestamp: fresh.timestamp,
+            result: fresh,
+            duration_ms: Math.round(performance.now() - startedAt),
+          }),
         );
 
         setSettling(fresh);

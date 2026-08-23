@@ -41,6 +41,8 @@ export interface SearchHistoryEntry {
   query: string;
   timestamp: string;
   result: SearchResult;
+  /** Client-measured submit-to-response time in ms; absent in older entries. */
+  duration_ms?: number;
 }
 
 export type TrendDirection = "up" | "down" | "flat";

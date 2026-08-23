@@ -11,6 +11,7 @@ import QuarantineZone from "@/app/components/QuarantineZone";
 import ResultCard from "@/app/components/ResultCard";
 import SearchBar from "@/app/components/SearchBar";
 import SearchHistory from "@/app/components/SearchHistory";
+import StatsBar from "@/app/components/StatsBar";
 import SummaryCard from "@/app/components/SummaryCard";
 import ThemeToggle from "@/app/components/ThemeToggle";
 import TrendBar from "@/app/components/TrendBar";
@@ -108,6 +109,10 @@ export default function Home() {
           <ThemeToggle />
         </div>
       </header>
+
+      <div className="mt-5">
+        <StatsBar />
+      </div>
 
       <div className="pb-20 lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-8">
         <aside className="hidden lg:block">
